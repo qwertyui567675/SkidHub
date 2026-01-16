@@ -1,4 +1,4 @@
--- ScriptBlox & Server GUI
+-- Pro Max Script Search & Server Tools
 -- Rayfield UI
 
 -- Load Rayfield
@@ -11,9 +11,9 @@ local TeleportService = game:GetService("TeleportService")
 
 -- Window
 local Window = Rayfield:CreateWindow({
-    Name = "Script Searcher Pro Ultra Max Version",
-    LoadingTitle = "Not Made By Ai ",
-    LoadingSubtitle = "Kys Alek Yahire Pena",
+    Name = "pro search script",
+    LoadingTitle = "Pro Max Script Search",
+    LoadingSubtitle = "Clean And Not Made By AI",
     ConfigurationSaving = { Enabled = false },
     KeySystem = false
 })
@@ -24,8 +24,8 @@ local Window = Rayfield:CreateWindow({
 local ScriptTab = Window:CreateTab("ScriptBlox", 4483362458)
 
 ScriptTab:CreateParagraph({
-    Title = "Browser",
-    Content = "Search scripts for this game only.\n⚠ User-uploaded content."
+    Title = "Script Browser",
+    Content = "Search scripts from ScriptBlox.\n⚠ Scripts are user-uploaded."
 })
 
 -- Container for results
@@ -64,37 +64,26 @@ local function searchScriptBlox(query)
     if not data or not data.result or not data.result.scripts then
         Rayfield:Notify({
             Title = "ScriptBlox",
-            Content = "No results",
+            Content = "No results found",
             Duration = 3
         })
         return
     end
 
-    local found = false
     for _, script in ipairs(data.result.scripts) do
-        if script.game and tostring(script.game.gameId) == tostring(game.PlaceId) then
-            found = true
-            local btn = ScriptTab:CreateButton({
-                Name = script.title,
-                Callback = function()
-                    loadstring(script.script)()
-                    Rayfield:Notify({
-                        Title = "Loaded",
-                        Content = script.title,
-                        Duration = 3
-                    })
-                end
-            })
-            table.insert(Results, btn)
-        end
-    end
-
-    if not found then
-        Rayfield:Notify({
-            Title = "ScriptBlox",
-            Content = "No scripts found for this game",
-            Duration = 3
+        -- No game filter, show all scripts
+        local btn = ScriptTab:CreateButton({
+            Name = script.title,
+            Callback = function()
+                loadstring(script.script)()
+                Rayfield:Notify({
+                    Title = "Loaded",
+                    Content = script.title,
+                    Duration = 3
+                })
+            end
         })
+        table.insert(Results, btn)
     end
 end
 
@@ -117,11 +106,61 @@ local ServerTab = Window:CreateTab("Server Options", 4483362458)
 
 ServerTab:CreateParagraph({
     Title = "Server Management",
-    Content = "Hop to different servers or rejoin this one.\nSmart server hop avoids repeats."
+    Content = "See available servers with their region, players, and max players.\nHop to them individually or auto hop."
 })
 
 local joinedServers = {}
 local autoHop = false
+local ServerButtons = {}
+
+-- Clear server buttons
+local function clearServerButtons()
+    for _, btn in ipairs(ServerButtons) do
+        pcall(function() btn:Destroy() end)
+    end
+    table.clear(ServerButtons)
+end
+
+-- Fetch and display servers
+local function fetchServers()
+    clearServerButtons()
+    local pageCursor = nil
+    local success, response = pcall(function()
+        return game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=50")
+    end)
+
+    if not success then
+        Rayfield:Notify({
+            Title = "Server List",
+            Content = "Failed to fetch servers",
+            Duration = 3
+        })
+        return
+    end
+
+    local data = HttpService:JSONDecode(response)
+    if not data or not data.data or #data.data == 0 then
+        Rayfield:Notify({
+            Title = "Server List",
+            Content = "No servers found",
+            Duration = 3
+        })
+        return
+    end
+
+    for _, server in ipairs(data.data) do
+        if server.playing < server.maxPlayers and server.id ~= game.JobId then
+            local region = server.region or "Unknown"
+            local btn = ServerTab:CreateButton({
+                Name = string.format("[%s] %d/%d Players", region, server.playing, server.maxPlayers),
+                Callback = function()
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, Players.LocalPlayer)
+                end
+            })
+            table.insert(ServerButtons, btn)
+        end
+    end
+end
 
 -- Rejoin current server
 ServerTab:CreateButton({
@@ -131,43 +170,18 @@ ServerTab:CreateButton({
     end
 })
 
--- Smart Server Hop
+-- Refresh server list
+ServerTab:CreateButton({
+    Name = "Refresh Servers",
+    Callback = fetchServers
+})
+
+-- Smart Server Hop (auto pick first available)
 local function smartServerHop()
-    local foundServer = false
-    local pageCursor = nil
-
-    repeat
-        local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-        if pageCursor then
-            url = url.."&cursor="..pageCursor
-        end
-
-        local success, response = pcall(function()
-            return game:HttpGet(url)
-        end)
-        if not success then break end
-
-        local data = HttpService:JSONDecode(response)
-        if data and data.data then
-            for _, server in ipairs(data.data) do
-                if server.playing < server.maxPlayers and not joinedServers[server.id] and server.id ~= game.JobId then
-                    TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, Players.LocalPlayer)
-                    joinedServers[server.id] = true
-                    foundServer = true
-                    break
-                end
-            end
-            pageCursor = data.nextPageCursor
-        end
-    until foundServer or not pageCursor
-
-    if not foundServer then
-        Rayfield:Notify({
-            Title = "Server Hop",
-            Content = "No new servers found. Resetting list...",
-            Duration = 3
-        })
-        joinedServers = {}
+    if #ServerButtons == 0 then fetchServers() end
+    for _, btn in ipairs(ServerButtons) do
+        btn.Callback() -- hop to first available server
+        break
     end
 end
 
@@ -176,7 +190,7 @@ ServerTab:CreateButton({
     Callback = smartServerHop
 })
 
--- Continuous Server Hop toggle
+-- Continuous Auto Hop
 ServerTab:CreateToggle({
     Name = "Auto Server Hop",
     CurrentValue = false,
@@ -192,7 +206,7 @@ ServerTab:CreateToggle({
             spawn(function()
                 while autoHop do
                     smartServerHop()
-                    wait(5) -- wait 5 seconds before next hop
+                    wait(5)
                 end
             end)
         else
@@ -209,7 +223,7 @@ ServerTab:CreateToggle({
 -- Ready Notification
 -------------------
 Rayfield:Notify({
-    Title = "ScriptBlox & Server Tools",
-    Content = "GUI Ready",
+    Title = "Fuck you Alek ",
+    Content = "Kys Faggot!",
     Duration = 3
 })
