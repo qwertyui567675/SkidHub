@@ -29,7 +29,7 @@ end
 
 -- ================= SUPPORTED GAMES =================
 local SupportedGames = {
-    ["10449761463"] = {
+    ["10449761463"] = { -- TSB
         Name = "The Strongest Battlegrounds",
         Scripts = {
             {
@@ -51,7 +51,7 @@ local SupportedGames = {
             }
         }
     },
-    ["142823291"] = {
+    ["142823291"] = { -- MM2
         Name = "Murder Mystery 2",
         Scripts = {
             {
@@ -85,17 +85,9 @@ local SupportedGames = {
             }
         }
     },
-    ["123974602339071"] = {
+    ["123974602339071"] = { -- Baseplate (UP)
         Name = "Baseplate (UP)",
-        Scripts = {
-            {
-                Name = "Muscle Legends Script",
-                Callback = function()
-                    loadstring(game:HttpGet(
-                        "https://protected-roblox-scripts.onrender.com/f086b166a4de0cd0475de7ac68e7e4fb"
-                    ))()
-                end
-            }
+        Scripts = { -- no scripts
         }
     }
 }
@@ -128,7 +120,7 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false
 })
 
--- Tabs (order matters)
+-- Tabs
 local HomeTab = Window:CreateTab("Home", 4483362458)
 local GameTab
 if CurrentGame then
@@ -275,23 +267,18 @@ UniversalTab:CreateButton({
 })
 
 -- ================= ALT CONTROL =================
-
--- Store names
 local MainName = ""
 local AltName = ""
 local OnlinePlayers = {}
 
--- Section for online players
 AltTab:CreateSection("Online Players")
 
--- Add player with neon green dot
 local function AddOnlineDot(name)
     if OnlinePlayers[name] then return end
     AltTab:CreateLabel({ Name = "🟢 " .. name })
     OnlinePlayers[name] = true
 end
 
--- Register LocalPlayer
 AddOnlineDot(LocalPlayer.Name)
 
 -- Input fields
@@ -313,7 +300,7 @@ AltTab:CreateInput({
     end
 })
 
--- Periodically update online players
+-- Periodic online update
 spawn(function()
     while true do
         for _, p in pairs(Players:GetPlayers()) do
@@ -323,16 +310,11 @@ spawn(function()
     end
 end)
 
--- Join Alt to your server
 AltTab:CreateButton({
     Name = "Join Alt to My Server",
     Callback = function()
         if AltName == "" or MainName == "" then
-            Rayfield:Notify({
-                Title = "Error",
-                Content = "Set Main and Alt usernames first!",
-                Duration = 3
-            })
+            Rayfield:Notify({ Title="Error", Content="Set Main & Alt first!", Duration=3 })
             return
         end
 
@@ -340,58 +322,26 @@ AltTab:CreateButton({
         local mainPlayer = Players:FindFirstChild(MainName)
 
         if not altPlayer or not mainPlayer then
-            Rayfield:Notify({
-                Title = "Error",
-                Content = "Players must be in the same server!",
-                Duration = 3
-            })
+            Rayfield:Notify({ Title="Error", Content="Both must be in same server!", Duration=3 })
             return
         end
 
-        TeleportService:TeleportToPlaceInstance(
-            game.PlaceId,
-            game.JobId,
-            altPlayer
-        )
-
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, altPlayer)
         AddOnlineDot(AltName)
-        Rayfield:Notify({
-            Title = "Success",
-            Content = AltName .. " joined your server",
-            Duration = 3
-        })
+        Rayfield:Notify({ Title="Success", Content=AltName.." joined server", Duration=3 })
     end
 })
 
--- Run SkidHub scripts on both Main & Alt
 AltTab:CreateButton({
     Name = "Run SkidHub on Both",
     Callback = function()
         if MainName == "" or AltName == "" then
-            Rayfield:Notify({
-                Title = "Error",
-                Content = "Set Main and Alt usernames first!",
-                Duration = 3
-            })
+            Rayfield:Notify({ Title="Error", Content="Set Main & Alt first!", Duration=3 })
             return
         end
-
-        -- Run hub on main
-        if Players:FindFirstChild(MainName) then
-            -- Assuming the main also executes loadstring manually
-            AddOnlineDot(MainName)
-        end
-
-        -- Run hub on alt
-        if Players:FindFirstChild(AltName) then
-            AddOnlineDot(AltName)
-        end
-
-        Rayfield:Notify({
-            Title = "SkidHub",
-            Content = "Scripts running on both Main & Alt (if present in server)",
-            Duration = 4
-        })
+        AddOnlineDot(MainName)
+        AddOnlineDot(AltName)
+        Rayfield:Notify({ Title="SkidHub", Content="Scripts active on both (if present)", Duration=4 })
     end
 })
 
