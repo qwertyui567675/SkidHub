@@ -87,7 +87,7 @@ local SupportedGames = {
     },
     ["123974602339071"] = { -- Baseplate (UP)
         Name = "Baseplate (UP)",
-        Scripts = { -- no scripts
+        Scripts = { -- empty
         }
     }
 }
@@ -129,6 +129,7 @@ end
 local UniversalTab = Window:CreateTab("Universal", 4483362458)
 local AltTab = Window:CreateTab("Alt Control", 4483362458)
 local SettingsTab = Window:CreateTab("Settings", 4483362458)
+local ScriptBloxTab = Window:CreateTab("ScriptBlox", 4483362458)
 
 -- ================= HOME =================
 HomeTab:CreateParagraph({
@@ -267,8 +268,7 @@ UniversalTab:CreateButton({
 })
 
 -- ================= ALT CONTROL =================
-local MainName = ""
-local AltName = ""
+local MainName, AltName = "", ""
 local OnlinePlayers = {}
 
 AltTab:CreateSection("Online Players")
@@ -281,26 +281,20 @@ end
 
 AddOnlineDot(LocalPlayer.Name)
 
--- Input fields
 AltTab:CreateInput({
     Name = "Main Username",
     PlaceholderText = "Enter your main account name",
     RemoveTextAfterFocusLost = false,
-    Callback = function(text)
-        MainName = text
-    end
+    Callback = function(text) MainName = text end
 })
 
 AltTab:CreateInput({
     Name = "Alt Username",
     PlaceholderText = "Enter your alt account name",
     RemoveTextAfterFocusLost = false,
-    Callback = function(text)
-        AltName = text
-    end
+    Callback = function(text) AltName = text end
 })
 
--- Periodic online update
 spawn(function()
     while true do
         for _, p in pairs(Players:GetPlayers()) do
@@ -314,21 +308,18 @@ AltTab:CreateButton({
     Name = "Join Alt to My Server",
     Callback = function()
         if AltName == "" or MainName == "" then
-            Rayfield:Notify({ Title="Error", Content="Set Main & Alt first!", Duration=3 })
+            Rayfield:Notify({Title="Error", Content="Set Main & Alt first!", Duration=3})
             return
         end
-
         local altPlayer = Players:FindFirstChild(AltName)
         local mainPlayer = Players:FindFirstChild(MainName)
-
         if not altPlayer or not mainPlayer then
-            Rayfield:Notify({ Title="Error", Content="Both must be in same server!", Duration=3 })
+            Rayfield:Notify({Title="Error", Content="Both must be in same server!", Duration=3})
             return
         end
-
         TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, altPlayer)
         AddOnlineDot(AltName)
-        Rayfield:Notify({ Title="Success", Content=AltName.." joined server", Duration=3 })
+        Rayfield:Notify({Title="Success", Content=AltName.." joined server", Duration=3})
     end
 })
 
@@ -336,12 +327,12 @@ AltTab:CreateButton({
     Name = "Run SkidHub on Both",
     Callback = function()
         if MainName == "" or AltName == "" then
-            Rayfield:Notify({ Title="Error", Content="Set Main & Alt first!", Duration=3 })
+            Rayfield:Notify({Title="Error", Content="Set Main & Alt first!", Duration=3})
             return
         end
         AddOnlineDot(MainName)
         AddOnlineDot(AltName)
-        Rayfield:Notify({ Title="SkidHub", Content="Scripts active on both (if present)", Duration=4 })
+        Rayfield:Notify({Title="SkidHub", Content="Scripts active on both (if present)", Duration=4})
     end
 })
 
@@ -360,8 +351,66 @@ SettingsTab:CreateParagraph({
     Content = "SkidHub\nMade by Nerdywerdy"
 })
 
+-- ================= SCRIPTBLOX =================
+ScriptBloxTab:CreateParagraph({
+    Title = "ScriptBlox Browser",
+    Content = "Search and run community scripts.\n⚠ Only scripts for this game will appear."
+})
+ScriptBloxTab:CreateLabel("⚠ Scripts are user-uploaded. Use at your own risk.")
+local ResultsSection = ScriptBloxTab:CreateSection("Results")
+
+local function ClearResults()
+    for _, child in pairs(ResultsSection:GetChildren()) do
+        if child.Name ~= "Label" then
+            child:Destroy()
+        end
+    end
+end
+
+local function SearchScriptBloxByGame(query)
+    ClearResults()
+    local success, response = pcall(function()
+        return game:HttpGet(
+            "https://scriptblox.com/api/script/search?q="..
+            HttpService:UrlEncode(query).."&max=20"
+        )
+    end)
+    if not success then
+        Rayfield:Notify({Title="ScriptBlox", Content="Failed to fetch scripts", Duration=3})
+        return
+    end
+    local data = HttpService:JSONDecode(response)
+    if not data or not data.result or #data.result.scripts == 0 then
+        Rayfield:Notify({Title="ScriptBlox", Content="No scripts found", Duration=3})
+        return
+    end
+    for _, script in ipairs(data.result.scripts) do
+        if script.game and tostring(script.gameId) == tostring(game.PlaceId) then
+            ScriptBloxTab:CreateButton({
+                Name = script.title,
+                Callback = function()
+                    loadstring(script.script)()
+                    Rayfield:Notify({Title="Script Loaded", Content=script.title, Duration=3})
+                end
+            })
+        end
+    end
+end
+
+ScriptBloxTab:CreateInput({
+    Name = "Search ScriptBlox",
+    PlaceholderText = "Search scripts for this game",
+    RemoveTextAfterFocusLost = true,
+    Callback = function(text)
+        if text ~= "" then
+            SearchScriptBloxByGame(text)
+        end
+    end
+})
+
+-- ================= FINISHED =================
 Rayfield:Notify({
     Title = "SkidHub Loaded",
-    Content = "Executor: " .. Executor,
+    Content = "Executor: "..Executor,
     Duration = 4
 })
