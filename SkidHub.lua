@@ -29,7 +29,6 @@ end
 
 -- ================= SUPPORTED GAMES =================
 local SupportedGames = {
-    -- The Strongest Battlegrounds
     ["10449761463"] = {
         Name = "The Strongest Battlegrounds",
         Scripts = {
@@ -52,8 +51,6 @@ local SupportedGames = {
             }
         }
     },
-
-    -- Murder Mystery 2
     ["142823291"] = {
         Name = "Murder Mystery 2",
         Scripts = {
@@ -88,8 +85,6 @@ local SupportedGames = {
             }
         }
     },
-
-    -- Baseplate (UP)
     ["123974602339071"] = {
         Name = "Baseplate (UP)",
         Scripts = {
@@ -133,16 +128,14 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false
 })
 
--- Tabs (ORDER MATTERS)
+-- Tabs (order matters)
 local HomeTab = Window:CreateTab("Home", 4483362458)
-
--- Game tab SECOND (only if supported)
 local GameTab
 if CurrentGame then
     GameTab = Window:CreateTab(CurrentGame.Name, 4483362458)
 end
-
 local UniversalTab = Window:CreateTab("Universal", 4483362458)
+local AltTab = Window:CreateTab("Alt Control", 4483362458)
 local SettingsTab = Window:CreateTab("Settings", 4483362458)
 
 -- ================= HOME =================
@@ -208,7 +201,6 @@ HomeTab:CreateButton({
 HomeTab:CreateButton({
     Name = "Join Lowest Ping Server",
     Callback = function()
-        -- Roblox API does not give real ping; best alternative is least populated
         local best, bestCount
         local req = game:HttpGet(
             "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
@@ -279,6 +271,127 @@ UniversalTab:CreateButton({
         loadstring(game:HttpGet(
             "https://raw.githubusercontent.com/Babyhamsta/RBLX_Scripts/main/Universal/BypassedDarkDexV3.lua"
         ))()
+    end
+})
+
+-- ================= ALT CONTROL =================
+
+-- Store names
+local MainName = ""
+local AltName = ""
+local OnlinePlayers = {}
+
+-- Section for online players
+AltTab:CreateSection("Online Players")
+
+-- Add player with neon green dot
+local function AddOnlineDot(name)
+    if OnlinePlayers[name] then return end
+    AltTab:CreateLabel({ Name = "🟢 " .. name })
+    OnlinePlayers[name] = true
+end
+
+-- Register LocalPlayer
+AddOnlineDot(LocalPlayer.Name)
+
+-- Input fields
+AltTab:CreateInput({
+    Name = "Main Username",
+    PlaceholderText = "Enter your main account name",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(text)
+        MainName = text
+    end
+})
+
+AltTab:CreateInput({
+    Name = "Alt Username",
+    PlaceholderText = "Enter your alt account name",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(text)
+        AltName = text
+    end
+})
+
+-- Periodically update online players
+spawn(function()
+    while true do
+        for _, p in pairs(Players:GetPlayers()) do
+            AddOnlineDot(p.Name)
+        end
+        wait(5)
+    end
+end)
+
+-- Join Alt to your server
+AltTab:CreateButton({
+    Name = "Join Alt to My Server",
+    Callback = function()
+        if AltName == "" or MainName == "" then
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Set Main and Alt usernames first!",
+                Duration = 3
+            })
+            return
+        end
+
+        local altPlayer = Players:FindFirstChild(AltName)
+        local mainPlayer = Players:FindFirstChild(MainName)
+
+        if not altPlayer or not mainPlayer then
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Players must be in the same server!",
+                Duration = 3
+            })
+            return
+        end
+
+        TeleportService:TeleportToPlaceInstance(
+            game.PlaceId,
+            game.JobId,
+            altPlayer
+        )
+
+        AddOnlineDot(AltName)
+        Rayfield:Notify({
+            Title = "Success",
+            Content = AltName .. " joined your server",
+            Duration = 3
+        })
+    end
+})
+
+-- Run SkidHub scripts on both Main & Alt
+AltTab:CreateButton({
+    Name = "Run SkidHub on Both",
+    Callback = function()
+        if MainName == "" or AltName == "" then
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Set Main and Alt usernames first!",
+                Duration = 3
+            })
+            return
+        end
+
+        -- Run hub on main
+        if Players:FindFirstChild(MainName) then
+            -- Assuming the main also executes loadstring manually
+            AddOnlineDot(MainName)
+        end
+
+        -- Run hub on alt
+        if Players:FindFirstChild(AltName) then
+            AddOnlineDot(AltName)
+        end
+
+        Rayfield:Notify({
+            Title = "SkidHub",
+            Content = "Scripts running on both Main & Alt (if present in server)",
+            Duration = 4
+        })
     end
 })
 
